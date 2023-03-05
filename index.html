@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+  </head>
+  <body style="height: 100vh; margin: 0; padding: 0">
+    <script>
+      //________________________________________________//
+      //                                                //
+      //     You can edit the variables below           //
+      //________________________________________________//
+
+      // Width of Steve in pixels
+      const steveWidth = 180;
+
+      // Duration of Steve on screen in milliseconds
+      const duration = 6000;
+
+      // A random sentence will be picked on each pageload to display as Steve's dialogue
+      // The required format is ["text","text",]
+      const sentences = [
+        "so what, you found a bug! move along...",
+        "i’m not a link, just the best thing that’s ever happened to u <3",
+        "What a messy website... Who made this?",
+      ];
+
+      // A random color will be picked on each pageload for Steve's speechbubble
+      const colors = ["#A9FF3C", "#FF8AC2", "#FFD439"];
+
+      // Link to the gif of Steve
+      const link =
+        "https://uploads-ssl.webflow.com/62f001b57ed5f4f9e2d3e569/635939ff171dea0a6543ee97_Steve_Web.gif";
+
+      // Chance that Steve will appear. Use any decimal between 0 and 1
+      const chance = 0.5;
+
+      //_________________________________________//
+      //                                         //
+      //     End of editable variables           //
+      //_________________________________________//
+
+      // Check if should trigger
+      const randomInt = Math.random();
+      if (randomInt < chance) {
+        // CLASSES ________________________________________________________________________
+        class WaypointContainer {
+          constructor(steps) {
+            // Create full-page div to contain all Steve elements
+            // and attach it to the body
+            const container = document.createElement("div");
+            document.body.appendChild(container);
+            this.container = container;
+
+            // Create array for waypoints
+            this.waypoints = [];
+            this.bezierPoints = [];
+            this.bezierCoordinates = [];
+
+            // Style container to sit on top and cover screen
+            container.style.position = "fixed";
+            container.style.overflow = "hidden";
+            container.style.pointerEvents = "none";
+            container.style.left = 0;
+            container.style.top = 0;
+            container.style.width = "100%";
+            container.style.height = "100vh";
+            container.id = "steveContainer";
+            container.style.zIndex = 9999999;
+
+            // Get dimensions
+            const { width, height } = document.body.getBoundingClientRect();
+            this.containerW = width + steveWidth * 2;
+            this.containerH = height;
+
+            // Create random entry- and controll-points
+            const { random } = Math;
+            const entrypoint = { x: 0, y: random() };
+            const waypointOne = { x: random(), y: random() };
+            const waypointTwo = { x: random(), y: random() };
+            const exitpoint = { x: 1, y: random() };
+            this.coordinates = [
+              entrypoint,
+              waypointOne,
+              waypointTwo,
+              exitpoint,
+            ];
+
+            // Create bezier waypoints
+            let i = 0;
+            while (i < steps) {
+              const bezierCoordinates = this.bezier(
+                i / steps,
+                this.coordinates[0],
+                this.coordinates[1],
+                this.coordinates[2],
+                this.coordinates[3]
+              );
+
+              this.bezierCoordinates.push(bezierCoordinates);
+
+              i++;
+            }
+          }
+
+          update() {
+            const { width, height } = document.body.getBoundingClientRect();
+            this.containerW = width + steveWidth * 2;
+            this.containerH = height;
+          }
+
+          bezier(t, p0, p1, p2, p3) {
+            var cX = 3 * (p1.x - p0.x),
+              bX = 3 * (p2.x - p1.x) - cX,
+              aX = p3.x - p0.x - cX - bX;
+
+            var cY = 3 * (p1.y - p0.y),
+              bY = 3 * (p2.y - p1.y) - cY,
+              aY = p3.y - p0.y - cY - bY;
+
+            var x = aX * Math.pow(t, 3) + bX * Math.pow(t, 2) + cX * t + p0.x;
+            var y = aY * Math.pow(t, 3) + bY * Math.pow(t, 2) + cY * t + p0.y;
+
+            return { x, y };
+          }
+        }
+
+        class Steve {
+          constructor(
+            link,
+            steveWidth,
+            posX,
+            posY,
+            textArray,
+            colorArray,
+            parentContainer
+          ) {
+            this.container;
+            this.element;
+            this.speechBubble;
+            this.currentPosIndex = 0;
+            this.isSpeaking = false;
+            this.textAnimationDuration = 0;
+
+            // Add container
+            const container = document.createElement("div");
+            container.style.position = "absolute";
+            container.style.display = "flex";
+            container.style.flexDirection = "column";
+            container.style.justifyContent = "center";
+            container.style.left = posX;
+            container.style.top = posY;
+            this.container = container;
+
+            // Add Steve
+            const steve = new Image();
+            steve.src = link;
+            steve.id = "steve_img";
+            steve.style.width = `${steveWidth}px`;
+            steve.style.pointerEvents = "all";
+            steve.style.cursor = "help";
+            this.steve = steve;
+
+            // Add steve speechbubble container
+            const speechBubbleContainer = document.createElement("div");
+            speechBubbleContainer.style.width = "max-content";
+            speechBubbleContainer.style.maxWidth = "186px";
+            speechBubbleContainer.style.marginBottom = "12px";
+            speechBubbleContainer.style.marginLeft = "-15%";
+            speechBubbleContainer.style.boxShadow =
+              "0px 4px 4px rgba(0, 0, 0, 0.25)";
+            speechBubbleContainer.style.padding = "8px 12px";
+            speechBubbleContainer.style.borderRadius = "8px";
+            speechBubbleContainer.style.scale = 0;
+            speechBubbleContainer.style.transition = "300ms";
+            const randomIndexColor = (
+              Math.random() *
+              (colorArray.length - 1)
+            ).toFixed(0);
+            speechBubbleContainer.style.background =
+              colorArray[randomIndexColor];
+
+            // Speechbubble arrow_________________
+            const speechBubbleTriangle = document.createElementNS(
+              "http://www.w3.org/2000/svg",
+              "svg"
+            );
+            speechBubbleTriangle.style.width = "8px";
+            speechBubbleTriangle.style.height = "13px";
+            speechBubbleTriangle.style.position = "absolute";
+            speechBubbleTriangle.style.bottom = "-13px";
+            speechBubbleTriangle.style.left = "80%";
+            const polygon = document.createElementNS(
+              "http://www.w3.org/2000/svg",
+              "polygon"
+            );
+            polygon.style.fill = colorArray[randomIndexColor];
+
+            var array = [
+              [0, 0],
+              [8, 0],
+              [4, 13],
+            ];
+
+            array.forEach((value) => {
+              var point = speechBubbleTriangle.createSVGPoint();
+              point.x = value[0];
+              point.y = value[1];
+              polygon.points.appendItem(point);
+            });
+            speechBubbleTriangle.style.filter =
+              "drop-shadow(0px 4px 4px rgba(0, 0, 0, 0.25))";
+
+            speechBubbleTriangle.appendChild(polygon);
+
+            // Speechbubble text_____________________
+            const speechBubbleText = document.createElement("p");
+            speechBubbleText.style.margin = 0;
+            speechBubbleText.style.fontFamily =
+              "Fkrastergroteskcompact blended, sans-serif";
+            speechBubbleText.style.fontSize = "16px";
+            speechBubbleText.style.letterSpacing = "1px";
+            // Convert string to individual spans
+            const randomIndex = (
+              Math.random() *
+              (textArray.length - 1)
+            ).toFixed(0);
+            this.textAnimationDuration =
+              textArray[randomIndex].length * 15 + 300;
+            for (var i = 0; i < textArray[randomIndex].length; i++) {
+              const letter = document.createElement("span");
+              letter.innerHTML = textArray[randomIndex][i];
+              letter.style.opacity = 0;
+              letter.classList.add("letterSpan");
+              speechBubbleText.appendChild(letter);
+            }
+
+            this.speechBubble = speechBubbleContainer;
+
+            // Add to dom
+            speechBubbleContainer.appendChild(speechBubbleTriangle);
+            speechBubbleContainer.appendChild(speechBubbleText);
+            container.appendChild(speechBubbleContainer);
+            container.appendChild(steve);
+            parentContainer.appendChild(container);
+          }
+
+          setPosition(x, y) {
+            this.container.style.left = x;
+            this.container.style.top = y;
+          }
+
+          showDialogue() {
+            this.speechBubble.style.scale = 1;
+            const spans = this.speechBubble.querySelectorAll(".letterSpan");
+            spans.forEach((span, i) => {
+              setTimeout(() => {
+                span.style.opacity = 1;
+
+                // Manually match this to textAnimationDuration
+              }, 300 + i * 15);
+            });
+          }
+
+          hideDialogue() {
+            this.speechBubble.style.scale = 0;
+          }
+        }
+
+        // MAIN ____________________________________________________________________
+        var container = new WaypointContainer((duration / 100) * 16);
+        var steve = new Steve(
+          link,
+          steveWidth,
+          container.bezierCoordinates[0].x * container.containerW -
+            steveWidth / 2 +
+            "px",
+          container.bezierCoordinates[0].y * container.containerH -
+            steveWidth / 2 +
+            "px",
+          sentences,
+          colors,
+          document.getElementById("steveContainer")
+        );
+
+        // Animate_________________________________________
+        window.requestAnimationFrame(animate);
+        // var textAnimationBlocker = false;
+
+        function animate() {
+          if (!steve.isSpeaking) {
+            if (
+              steve.currentPosIndex <
+              container.bezierCoordinates.length - 1
+            ) {
+              const x =
+                container.bezierCoordinates[steve.currentPosIndex + 1].x *
+                  container.containerW -
+                steveWidth +
+                "px";
+              const y =
+                container.bezierCoordinates[steve.currentPosIndex + 1].y *
+                  container.containerH -
+                steveWidth / 2 +
+                "px";
+              steve.setPosition(x, y);
+              steve.currentPosIndex++;
+            } else {
+              // steve.currentPosIndex = 0;
+            }
+          }
+
+          window.requestAnimationFrame(animate);
+        }
+        animate();
+
+        // LISTENERS ____________________________________________________________________
+        let clicked = false;
+        let textAnimDone = false;
+        var intervalActive = false;
+        var interactionStarted = false;
+
+        // Window re-size
+        window.addEventListener("resize", () => {
+          container.update();
+        });
+        // Steve hover
+        steve.steve.addEventListener("mouseenter", () => {
+          console.log(interactionStarted);
+          if (!interactionStarted) {
+            interactionStarted = true;
+            startSteveInteraction();
+          }
+        });
+
+        steve.steve.addEventListener("mouseleave", (e) => {
+          if (!intervalActive && !clicked) {
+            interactionStarted = false;
+            startClosingInterval();
+          }
+        });
+
+        // Steve click
+        document.addEventListener("click", (e) => {
+          if (!interactionStarted && e.target.id === "steve_img") {
+            interactionStarted = true;
+            startSteveInteraction();
+          }
+
+          if (interactionStarted && clicked) {
+            interactionStarted = false;
+            clicked = false;
+            startClosingInterval();
+          }
+
+          if (interactionStarted) clicked = true;
+        });
+
+        function startSteveInteraction() {
+          steve.showDialogue();
+          steve.isSpeaking = true;
+
+          setTimeout(() => {
+            textAnimDone = true;
+          }, steve.textAnimationDuration + 300);
+        }
+        function endSteveInteraction() {
+          steve.showDialogue();
+          steve.isSpeaking = true;
+
+          setTimeout(() => {
+            textAnimDone = true;
+          }, steve.textAnimationDuration + 300);
+        }
+        function startClosingInterval() {
+          intervalActive = true;
+          var interval = setInterval(() => {
+            if (textAnimDone) {
+              steve.isSpeaking = false;
+              steve.hideDialogue();
+              intervalActive = false;
+              window.clearInterval(interval);
+            }
+          }, 50);
+        }
+
+        // setInterval(() => {
+        //   console.log(`interactionStarted: ${interactionStarted}`);
+        //   console.log(`isSpeaking: ${steve.isSpeaking}`);
+        //   console.log(`clicked: ${clicked}`);
+        //   console.log(`textAnimDone: ${textAnimDone}`);
+        //   console.log(`intervalActive: ${intervalActive}`);
+        //   console.log(`______________________`);
+        // }, 2000);
+      }
+    </script>
+  </body>
+</html>
